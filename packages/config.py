@@ -1,19 +1,20 @@
 """
-Methods to read config values
+Handling of config file
 """
 import os
 import configparser
 
-class ConfigReader:
+
+class Config:
     """
 Reader to get any value, a float or an int from a config file
     """
 
     def __init__(self, path):
         if not os.path.exists(path):
-            raise Exception('Config file was not found: {0}'.format(path))
-        self._config_reader = configparser.ConfigParser()
-        self._config_reader.read(path)
+            raise Exception(f"Config file was not found: {os.path.abspath(path)}")
+        self._config = configparser.ConfigParser()
+        self._config.read(path)
 
     def get_value(self, section, key):
         """
@@ -22,9 +23,9 @@ Reading a config value
         :param key: Name of the config entry to read
         :return: The config entry
         """
-        if section in self._config_reader:
-            if key in self._config_reader[section]:
-                return self._config_reader[section][key]
+        if section in self._config:
+            if key in self._config[section]:
+                return self._config[section][key]
             else:
                 raise Exception('Key {0} was not found in section {1} of the config file'.format(key, section))
         else:

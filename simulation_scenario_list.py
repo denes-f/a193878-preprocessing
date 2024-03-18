@@ -1,39 +1,39 @@
 """
-Generates a list of scenarios from the HARA sheet.
+Generates a list of scenarios for the simulation using the HARA sheet as input.
 """
 import copy
 import math
 import os
 import openpyxl
 import openpyxl.styles
-from ConfigReader import ConfigReader
+from packages.config import Config
 
 
 def main(mode):
     """
-Generates a list of scenarios from the HARA sheet.
+Generates a list of scenarios for the simulation using the HARA sheet as input.
     """
 
     config_path = 'config.ini'
-    config_reader = ConfigReader(config_path)
+    config = Config(config_path)
 
-    hara_path = config_reader.get_value('Hara_Sheet', 'path')
-    hara_sheet_name = config_reader.get_value('Hara_Sheet', 'sheet_name')
-    hara_reader = HaraReader(hara_path, hara_sheet_name, config_reader, config_reader.get_int('Hara_Sheet', 'header_size'))
+    hara_path = config.get_value('Hara_Sheet', 'path')
+    hara_sheet_name = config.get_value('Hara_Sheet', 'sheet_name')
+    hara_reader = HaraReader(hara_path, hara_sheet_name, config, config.get_int('Hara_Sheet', 'header_size'))
 
-    scenario_template_path = config_reader.get_value('Scenario_Template', 'path')
-    scenario_template_sheet_name = config_reader.get_value('Scenario_Template', 'sheet_name')
+    scenario_template_path = config.get_value('Scenario_Template', 'path')
+    scenario_template_sheet_name = config.get_value('Scenario_Template', 'sheet_name')
 
-    scenario_writer = ScenarioWriter(config_reader, scenario_template_path, scenario_template_sheet_name, config_reader.get_int('Scenario_Template', 'header_size'), mode)
+    scenario_writer = ScenarioWriter(config, scenario_template_path, scenario_template_sheet_name, config.get_int('Scenario_Template', 'header_size'), mode)
 
     while True:  # Iterating through the items in the HARA
-        hara_item = hara_reader.get_next_item()
-        if hara_item.item_id is None:
+        hazardous_event = hara_reader.get_next_item()
+        if hazardous_event.item_id is None:
             break
-        if not hara_item.relevant:
+        if not hazardous_event.relevant:
             continue
-        scenario = Scenario(config_reader, hara_item)  # Converting HARA items to the Scenario list (using the config settings)
-        scenario_writer.write(hara_item, scenario)  # Writing to the Scenario list
+        scenario = Scenario(config, hazardous_event)  # Converting the Hazardous Events to the Scenario list (using the config settings)
+        scenario_writer.write(hazardous_event, scenario)  # Writing to the Scenario list
     scenario_writer.save()
 
 
@@ -169,9 +169,10 @@ Applied braking force in percentage
     def __init__(self, ftti):
         self.ftti = ftti
 
-class HaraItem:
+
+class HazardousEvent:
     """
-Type containing the properties of one line in the HARA
+Type containing the properties for a Hazardous Event
     """
     def __init__(self, item, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, hazard, relevant, comment):
         self.item_id = item
@@ -189,20 +190,20 @@ Type containing the properties of one line in the HARA
 
 class Scenario:
     """
-Converts a HARA item to a Scenario (using the config settings)
+Converts a Hazardous event to a Scenario (using the config settings)
     """
 
-    def __init__(self, config_reader, hara_item):
+    def __init__(self, config_reader, hazardous_event):
         self.config_reader = config_reader
-        slope = hara_item.slope.lower()
-        route = hara_item.route.lower()
-        road_condition = hara_item.road_condition.lower()
-        engaged_gear = hara_item.engaged_gear.lower()
-        vehicle_speed = hara_item.vehicle_speed.lower()
-        brake_pedal = hara_item.brake_pedal.lower()
-        hazard = hara_item.hazard
+        slope = hazardous_event.slope.lower()
+        route = hazardous_event.route.lower()
+        road_condition = hazardous_event.road_condition.lower()
+        engaged_gear = hazardous_event.engaged_gear.lower()
+        vehicle_speed = hazardous_event.vehicle_speed.lower()
+        brake_pedal = hazardous_event.brake_pedal.lower()
+        hazard = hazardous_event.hazard
 
-        if slope == '-' or 'flat' in slope:
+        if slope == 'any' or '-' or 'flat' in slope:  # TODO: remove 'any' from the script, specify correctly the slope in the HARA
             road_gradient = config_reader.get_value('Slope', 'flat')
         elif 'slight' in slope:
             road_gradient = config_reader.get_value('Slope', 'slight_slope')
@@ -211,13 +212,13 @@ Converts a HARA item to a Scenario (using the config settings)
         elif 'up' in slope:
             road_gradient = config_reader.get_value('Slope', 'uphill')
         else:
-            raise Exception('Slope "{0}" not recognized in item {1}'.format(slope, hara_item.item_id))
+            raise Exception('Slope "{0}" not recognized in item {1}'.format(slope, hazardous_event.item_id))
         try:
             self.road_gradient = float(road_gradient)
         except ValueError:
             raise ValueError("Invalid road gradient '{0}' in config file, in Slope section".format(road_gradient))
 
-        if vehicle_speed == '-' or 'stand' in vehicle_speed:
+        if vehicle_speed == 'any' or '-' or 'stand' in vehicle_speed:  # TODO: remove 'any' from the script, specify correctly the speed in the HARA
             speed = config_reader.get_value('Speed', 'standstill')
         elif 'very low' in vehicle_speed:
             speed = config_reader.get_value('Speed', 'very_low')
@@ -228,7 +229,7 @@ Converts a HARA item to a Scenario (using the config settings)
         elif 'high' in vehicle_speed:
             speed = config_reader.get_value('Speed', 'high')
         else:
-            raise Exception('Speed "{0}" not recognized in item {1}'.format(vehicle_speed, hara_item.item_id))
+            raise Exception('Speed "{0}" not recognized in item {1}'.format(vehicle_speed, hazardous_event.item_id))
         speed_list = speed.strip('[').strip(']').split(',')
         self.vehicle_speed = [.0] * len(speed_list)
         for i in range(len(speed_list)):
@@ -241,14 +242,14 @@ Converts a HARA item to a Scenario (using the config settings)
         if route == '-' or 'straight' in route or 'any' in route:
             self.road_radius = 'straight'
         elif 'curve' in route:
-            if vehicle_speed == '-' or 'stand' in vehicle_speed or 'low' in vehicle_speed:
+            if vehicle_speed == '-' or 'stand' in vehicle_speed or 'low' in vehicle_speed or 'any' in vehicle_speed:  # TODO: remove 'any' from the script, specify correctly the speed in the HARA
                 radius = config_reader.get_value('Radius', 'curve_low_speed')
             elif 'medium' in vehicle_speed:
                 radius = config_reader.get_value('Radius', 'curve_medium_speed')
             elif 'high' in vehicle_speed:
                 radius = config_reader.get_value('Radius', 'curve_high_speed')
             else:
-                raise Exception('Speed "{0}" not recognized in item {1}'.format(vehicle_speed, hara_item.item_id))
+                raise Exception('Speed "{0}" not recognized in item {1}'.format(vehicle_speed, hazardous_event.item_id))
             try:
                 self.road_radius = float(radius)
             except ValueError:
@@ -267,7 +268,7 @@ Converts a HARA item to a Scenario (using the config settings)
         elif 'gravel' in road_condition:
             road_friction = config_reader.get_value('Road_friction', 'gravel')
         else:
-            raise Exception('Road condition {0} not recognized in item {1}'.format(road_condition, hara_item.item_id))
+            raise Exception('Road condition {0} not recognized in item {1}'.format(road_condition, hazardous_event.item_id))
         try:
             self.road_friction = float(road_friction)
         except ValueError:
@@ -464,7 +465,7 @@ Getting the next entry from HARA
         relevance = self._sheet.cell(row=self._actual_row, column=self._idx_relevance).value == 'x'
         comment = self._sheet.cell(row=self._actual_row, column=self._idx_comment).value
 
-        return HaraItem(item, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, hazard, relevance, comment)
+        return HazardousEvent(item, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, hazard, relevance, comment)
 
 
 class ScenarioWriter:
@@ -550,22 +551,22 @@ Writer for writing the Scenario list to a file
     def write_cell(self, idx_row, idx_col, value):
         self._sheet.cell(row=idx_row, column=idx_col).value = value
 
-    def write(self, hara_item, scenario):
+    def write(self, hazardous_event, scenario):
         """
  Method to deal with the writing of scenarios containing multiple faults and reactions
-        :param hara_item: HARA entry
+        :param hazardous_event: HARA entry
         :param scenario: Scenario
         """
         for speed in scenario.vehicle_speed:
             for fault in scenario.faults:
                 reactions = self._get_reactions(fault, scenario)
                 for reaction in reactions:
-                    self._write_line(hara_item, scenario, speed, fault, reaction)
+                    self._write_line(hazardous_event, scenario, speed, fault, reaction)
 
-    def _write_line(self, hara_item, scenario, vehicle_speed, fault, reaction):
+    def _write_line(self, hazardous_event, scenario, vehicle_speed, fault, reaction):
         """
 Method to deal with the writing of scenarios with a single fault but multiple reactions
-        :param hara_item: HARA entry
+        :param hazardous_event: HARA entry
         :param scenario: Scenario
         :param vehicle_speed: Vehicle speed
         :param fault: A single malfunction
@@ -575,41 +576,41 @@ Method to deal with the writing of scenarios with a single fault but multiple re
 
         fault_level = [1]
         if self._mode.lower() == 'ftti_list' or self._mode.lower() == 'acceptance_list':
-            if hara_item.comment is None:
+            if hazardous_event.comment is None:
                 return
-            target_test_run_id = int(hara_item.comment)
+            target_test_run_id = int(hazardous_event.comment)
             if target_test_run_id != self._actual_test_run_id:
                 return
 
             if self._mode.lower() == 'ftti_list':
-                if '[TQ1]' in hara_item.hazard.upper():
+                if '[TQ1]' in hazardous_event.hazard.upper():
                     ftti = [100, 200, 300, 400, 500]
-                elif '[TQ2]' in hara_item.hazard.upper():
+                elif '[TQ2]' in hazardous_event.hazard.upper():
                     ftti = [100, 200, 300, 400, 500]
-                elif '[TQ3]' in hara_item.hazard.upper():
+                elif '[TQ3]' in hazardous_event.hazard.upper():
                     ftti = [75, 150, 225, 300, 375]
-                elif '[TQ4]' in hara_item.hazard.upper():
+                elif '[TQ4]' in hazardous_event.hazard.upper():
                     ftti = [75, 150, 225, 300, 375]
-                elif '[TQ5]' in hara_item.hazard.upper():
+                elif '[TQ5]' in hazardous_event.hazard.upper():
                     ftti = [75, 150, 225, 300, 375]
-                elif '[TQ6]' in hara_item.hazard.upper():
+                elif '[TQ6]' in hazardous_event.hazard.upper():
                     ftti = [75, 150, 225, 300, 375]
-                elif '[SUS1]' in hara_item.hazard.upper():
+                elif '[SUS1]' in hazardous_event.hazard.upper():
                     ftti = [5, 10, 15, 20, 25]
-                elif '[SUS2]' in hara_item.hazard.upper():
+                elif '[SUS2]' in hazardous_event.hazard.upper():
                     ftti = [10, 20, 30, 40, 50]
-                elif '[SUS3]' in hara_item.hazard.upper():
+                elif '[SUS3]' in hazardous_event.hazard.upper():
                     ftti = [5, 10, 15, 20, 25]
-                elif '[RAS1]' in hara_item.hazard.upper():
+                elif '[RAS1]' in hazardous_event.hazard.upper():
                     ftti = [5, 10, 15, 20, 25]
-                elif '[RAS3]' in hara_item.hazard.upper():
+                elif '[RAS3]' in hazardous_event.hazard.upper():
                     ftti = [10, 20, 30, 40, 50]
-                elif '[BS1]' in hara_item.hazard.upper():
+                elif '[BS1]' in hazardous_event.hazard.upper():
                     ftti = [75, 150, 225, 300, 375]
-                elif '[BS2]' in hara_item.hazard.upper():
+                elif '[BS2]' in hazardous_event.hazard.upper():
                     ftti = [0, 5, 10, 15, 20]
                 else:
-                    raise Exception("The FTTI for {0} could not be determined. Hazard could not be recognized: {1}".format(hara_item.item_id, hara_item.hazard))
+                    raise Exception("The FTTI for {0} could not be determined. Hazard could not be recognized: {1}".format(hazardous_event.item_id, hazardous_event.hazard))
             else:
                 ftti = [1000]
                 fault_level = [.2, .4, .6, .8, 1]
@@ -636,7 +637,7 @@ Method to deal with the writing of scenarios with a single fault but multiple re
 
                 print('Status: Writing item #{0}'.format(self._actual_row - self._header))
 
-                self._sheet.cell(row=self._actual_row, column=self._idx_hara_id).value = hara_item.item_id
+                self._sheet.cell(row=self._actual_row, column=self._idx_hara_id).value = hazardous_event.item_id
                 self._sheet.cell(row=self._actual_row, column=self._idx_test_run_id).value = '%05d' % loc_test_run_id
                 self._sheet.cell(row=self._actual_row, column=self._idx_constant_road_radius).value = scenario.road_radius
                 self._sheet.cell(row=self._actual_row, column=self._idx_road_friction_coefficient).value = scenario.road_friction
