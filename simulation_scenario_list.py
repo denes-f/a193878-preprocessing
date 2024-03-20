@@ -2,7 +2,6 @@
 Generates a list of scenarios for the simulation using the HARA sheet as input.
 """
 import copy
-import math
 import os
 import openpyxl
 import openpyxl.styles
@@ -32,26 +31,6 @@ Generates a list of scenarios for the simulation using the HARA sheet as input.
         scenario = Scenario(config, hazardous_event)  # Converting the Hazardous Events to the Scenario list (using the config settings)
         scenario_writer.write(hazardous_event, scenario)  # Writing to the Scenario list
     scenario_writer.save()
-
-
-class SteeringFault:
-    """
-Steering malfunction
-    """
-
-    def __init__(self, additional_unintended_angle, slew_rate):
-        self.additional_unintended_angle = additional_unintended_angle
-        self.slew_rate = slew_rate
-
-
-class RearSteeringFault:
-    """
-Rear axle steering malfunction
-    """
-
-    def __init__(self, additional_unintended_angle, slew_rate):
-        self.additional_unintended_angle = additional_unintended_angle
-        self.slew_rate = slew_rate
 
 
 class TorqueFault:
@@ -90,48 +69,6 @@ Checks the possibility of losing stability
         return False
 
 
-class RideHeightFault:
-    """
-Ride height malfunction
-    """
-
-    def __init__(self, front_left=None, front_right=None, rear_left=None, rear_right=None, slew_rate=None):
-        self.front_left = front_left
-        self.front_right = front_right
-        self.rear_left = rear_left
-        self.rear_right = rear_right
-        self.slew_rate = slew_rate
-
-    @classmethod
-    def all_wheels(cls, unintended_height, slew_rate):
-        """
-Unintended ride height malfunction for all wheels
-        :param slew_rate: The rate in m/s at which the ride height fault is injected
-        :param unintended_height: The unintended ride height adjustment in meters
-        :return: Returns a RideHeightFault with all wheels having the same unintended ride height
-        """
-        return cls(unintended_height, unintended_height, unintended_height, unintended_height, slew_rate)
-
-
-class BrakingFault:
-    """
-Hydraulic brake malfunction
-    """
-
-    def __init__(self, unintended_braking_torque):
-        self.unintended_braking_torque = unintended_braking_torque
-
-
-class ParkBrakeFault:
-    """
-Park brake malfunction
-    """
-
-    def __init__(self, park_brake_status):
-        self.park_brake_status = park_brake_status
-        raise NotImplementedError('Park brake faults are not implemented yet')
-
-
 class VerySlowSteeringReaction:
     """
 Applied steering reaction in degrees per second
@@ -157,6 +94,7 @@ Applied braking force in percentage
 
     def __init__(self, braking):
         self.braking = braking
+
 
 class FaultTolerantTime:
     """
@@ -231,7 +169,7 @@ Converts a Hazardous event to a Scenario (using the config settings)
         self.vehicle_speed = [.0] * len(speed_list)
         for i in range(len(speed_list)):
             try:
-                # Currently reverse driving is not supported by the VSM model. Therefore positive speeds are used in all scenarios.
+                # Currently reverse driving is not supported by the VSM model. Therefore, positive speeds are used in all scenarios.
                 self.vehicle_speed[i] = float(speed_list[i]) if engaged_gear != 'r' else 1 * float(speed_list[i])
             except ValueError:
                 raise ValueError(f"Invalid speed thresholds in config file, '{speed}' in Speed section")
@@ -295,10 +233,8 @@ Gets a list of the faults for the specified hazard
         if engaged_gear is None or engaged_gear != 'R':
             direction = 1
         else:
-            # Currently reverse driving is not supported by the VSM model. Therefore positive speeds are used in all scenarios.
+            # Currently reverse driving is not supported by the VSM model. Therefore, positive speeds are used in all scenarios.
             direction = 1
-        front_wheel_angle = self.get_wheel_angle(self.road_radius, self.config.get_float('Vehicle', 'wheelbase'))
-        rear_wheel_angle = front_wheel_angle / 10
 
         if '[TQ1]' in hazard:
             faults.append(TorqueFault(torque_error_front=self.config.get_float('Hazard_TQ', 'TQ1'),
@@ -346,69 +282,7 @@ Gets a list of the faults for the specified hazard
             faults.append(TorqueFault(torque_error_front=self.config.get_float('Hazard_TQ', 'TQ8'),
                                       torque_error_rear=self.config.get_float('Hazard_TQ', 'TQ8'),
                                       slew_rate=self.config.get_float('Hazard_TQ', 'slew_rate')))
-        elif 'SUS' in hazard:
-            if '[SUS1]' in hazard:
-                # Too much steering goes until the physical limit of the steering system
-                front_steering_limit = self.config.get_float('Vehicle', 'front_steering_limit')
-                additional_unintended_angle = front_steering_limit - front_wheel_angle
-                faults.append(SteeringFault(additional_unintended_angle, self.config.get_float('Hazard_SUS', 'slew_rate')))
-            elif '[SUS2]' in hazard:
-                faults.append(SteeringFault(-1 * self.config.get_float('Hazard_SUS', 'SUS2') / 100 * front_wheel_angle, self.config.get_float('Hazard_SUS', 'slew_rate')))
-            elif '[SUS3]' in hazard:
-                # Steering in opposite direction will be the same as the steering input from the driver but in the opposite direction.
-                faults.append(SteeringFault(-2 * front_wheel_angle, self.config.get_float('Hazard_SUS', 'slew_rate')))
-        elif 'RAS' in hazard:
-            if '[RAS1]' in hazard:
-                # Too much steering goes until the physical limit of the steering system
-                rear_steering_limit = self.config.get_float('Vehicle', 'rear_steering_limit')
-                additional_unintended_angle = rear_steering_limit - rear_wheel_angle
-                faults.append(RearSteeringFault(additional_unintended_angle, self.config.get_float('Hazard_RAS', 'slew_rate')))
-            elif '[RAS3]' in hazard:
-                faults.append(RearSteeringFault((-2 * rear_wheel_angle), self.config.get_float('Hazard_RAS', 'slew_rate')))
-        elif 'BS' in hazard:
-            if '[BS1]' in hazard:
-                faults.append(BrakingFault(self.config.get_float('Hazard_BS', 'BS1')))
-        elif 'PB' in hazard:
-            faults.append(ParkBrakeFault(1))
-        elif '[RHA1]' in hazard:
-            faults.append(RideHeightFault.all_wheels(self.config.get_float('Hazard_RHA', 'RHA1'),
-                                                     slew_rate=self.config.get_float('Hazard_RHA', 'slew_rate')))
-        elif '[RHA2]' in hazard:
-            faults.append(RideHeightFault.all_wheels(self.config.get_float('Hazard_RHA', 'RHA2'),
-                                                     slew_rate=self.config.get_float('Hazard_RHA', 'slew_rate')))
-        elif '[RHA3]' in hazard:
-            faults.append(RideHeightFault(self.config.get_float('Hazard_RHA', 'RHA3'),
-                                          -1 * self.config.get_float('Hazard_RHA', 'RHA3'),
-                                          -1 * self.config.get_float('Hazard_RHA', 'RHA3'),
-                                          self.config.get_float('Hazard_RHA', 'RHA3'),
-                                          slew_rate=self.config.get_float('Hazard_RHA', 'slew_rate')))
-            faults.append(RideHeightFault(self.config.get_float('Hazard_RHA', 'RHA3'),
-                                          -1 * self.config.get_float('Hazard_RHA', 'RHA3'),
-                                          self.config.get_float('Hazard_RHA', 'RHA3'),
-                                          -1 * self.config.get_float('Hazard_RHA', 'RHA3'),
-                                          slew_rate=self.config.get_float('Hazard_RHA', 'slew_rate')))
         return faults
-
-    @staticmethod
-    def get_wheel_angle(radius, wheelbase: float):
-        """
-Calculates the front wheel angles from the radius of the road
-        :param radius: The road radius in meters
-        :param wheelbase: The wheelbase of the vehicle in meters
-        :return:
-        """
-        if isinstance(radius, str):
-            if radius.lower() == 'straight':
-                radius_float = 100.0  # For straight road driving, the steering angle of a 100 m curve is taken into consideration when defining too much steering malfunction
-            else:
-                raise ValueError(f"The specified road radius '{radius}' is not valid")
-        else:
-            try:
-                radius_float = float(radius)
-            except ValueError:
-                raise ValueError(f"The specified road radius '{radius}' is not valid")
-        wheel_angle_deg = math.asin(wheelbase / radius_float) * 180.0 / math.pi
-        return wheel_angle_deg
 
 
 class Hara:
@@ -679,24 +553,10 @@ Method to deal with the writing of scenarios with a single fault but multiple re
             raise Exception(f"Type '{type(reaction)}' of the specified reaction is not valid")
 
     def _write_fault(self, fault, level=1):
-        if type(fault) is SteeringFault:
-            self._sheet.cell(row=self._current_row, column=self._idx_steering_front_angle).value = fault.additional_unintended_angle * level if fault.additional_unintended_angle is not None else fault.additional_unintended_angle
-            self._sheet.cell(row=self._current_row, column=self._idx_steering_front_slew_rate).value = fault.slew_rate
-        elif type(fault) is RearSteeringFault:
-            self._sheet.cell(row=self._current_row, column=self._idx_steering_rear_angle).value = fault.additional_unintended_angle * level if fault.additional_unintended_angle is not None else fault.additional_unintended_angle
-            self._sheet.cell(row=self._current_row, column=self._idx_steering_rear_slew_rate).value = fault.slew_rate
-        elif type(fault) is TorqueFault:
+        if type(fault) is TorqueFault:
             self._sheet.cell(row=self._current_row, column=self._idx_torque_front_axle).value = fault.torque_error_front * level if fault.torque_error_front is not None else fault.torque_error_front
             self._sheet.cell(row=self._current_row, column=self._idx_torque_rear_axle).value = fault.torque_error_rear * level if fault.torque_error_rear is not None else fault.torque_error_rear
             self._sheet.cell(row=self._current_row, column=self._idx_torque_slew_rate).value = fault.slew_rate
-        elif type(fault) is RideHeightFault:
-            self._sheet.cell(row=self._current_row, column=self._idx_ride_height_front_left).value = fault.front_left * level if fault.front_left is not None else fault.front_left
-            self._sheet.cell(row=self._current_row, column=self._idx_ride_height_front_right).value = fault.front_right * level if fault.front_right is not None else fault.front_right
-            self._sheet.cell(row=self._current_row, column=self._idx_ride_height_rear_left).value = fault.rear_left * level if fault.rear_left is not None else fault.rear_left
-            self._sheet.cell(row=self._current_row, column=self._idx_ride_height_rear_right).value = fault.rear_right * level if fault.rear_right is not None else fault.rear_right
-            self._sheet.cell(row=self._current_row, column=self._idx_ride_height_slew_rate).value = fault.slew_rate
-        elif type(fault) is BrakingFault:
-            self._sheet.cell(row=self._current_row, column=self._idx_unintended_braking_torque).value = fault.unintended_braking_torque * level if fault.unintended_braking_torque is not None else fault.unintended_braking_torque
 
     def _get_reactions(self, fault, scenario):
         """
@@ -726,7 +586,7 @@ Method to get the expected reactions based on the fault and road conditions
             braking_reaction = min(braking_reaction, self._config.get_float('Reaction', 'braking_low_friction'))
 
         # Braking without steering is a reaction that is expected always unless the fault is already leading to a high deceleration
-        if (not isinstance(fault, TorqueFault) or fault.get_overall_torque() >= 0) and not isinstance(fault, BrakingFault):
+        if not isinstance(fault, TorqueFault) or fault.get_overall_torque() >= 0:
             reactions.append([VerySlowSteeringReaction(0), SlowSteeringReaction(0), BrakingReaction(braking_reaction)])
 
         # Braking reaction together with steering correction is expected always except when driving on a straight road with a high friction
