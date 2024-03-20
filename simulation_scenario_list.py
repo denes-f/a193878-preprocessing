@@ -26,13 +26,11 @@ Generates a list of scenarios for the simulation using the HARA sheet as input.
 
     scenario_writer = ScenarioList(config, scenario_template_path, scenario_template_sheet_name, mode)
 
-    hazardous_event = hara.get_next_hazardous_event()
-    while hazardous_event.id is not None:  # Iterating through the hazardous events in the HARA
+    for hazardous_event in hara.hazardous_events():
         if not hazardous_event.relevant:
             continue
         scenario = Scenario(config, hazardous_event)  # Converting the Hazardous Events to the Scenario list (using the config settings)
         scenario_writer.write(hazardous_event, scenario)  # Writing to the Scenario list
-        hazardous_event = hara.get_next_hazardous_event()
     scenario_writer.save()
 
 
@@ -415,7 +413,7 @@ Calculates the front wheel angles from the radius of the road
 
 class Hara:
     """
-Loads the HARA sheet and gets entries consecutively
+Loads the HARA sheet and gets the hazardous events
     """
 
     def __init__(self, path, sheet_name, config):
@@ -445,25 +443,34 @@ Loads the HARA sheet and gets entries consecutively
         self._idx_relevance = self._config.get_int('Hara_Sheet', 'idx_relevance')
         self._idx_comment = self._config.get_int('Hara_Sheet', 'idx_comment')
 
-    def get_next_hazardous_event(self):
-        """
-Gets the next hazardous event from the HARA
-        :return: Returns a HazardousEvent containing all the info for the hazardous event
-        """
-        self._current_row += 1
-        hazardous_event_id = self._sheet.cell(row=self._current_row, column=self._idx_id).value
-        location = self._sheet.cell(row=self._current_row, column=self._idx_location).value
-        slope = self._sheet.cell(row=self._current_row, column=self._idx_slope).value
-        route = self._sheet.cell(row=self._current_row, column=self._idx_route).value
-        road_condition = self._sheet.cell(row=self._current_row, column=self._idx_road_condition).value
-        engaged_gear = self._sheet.cell(row=self._current_row, column=self._idx_engaged_gear).value
-        vehicle_speed = self._sheet.cell(row=self._current_row, column=self._idx_vehicle_speed).value
-        brake_pedal = self._sheet.cell(row=self._current_row, column=self._idx_brake_pedal).value
-        hazard = self._sheet.cell(row=self._current_row, column=self._idx_hazard).value
-        relevance = self._sheet.cell(row=self._current_row, column=self._idx_relevance).value == 'x'
-        comment = self._sheet.cell(row=self._current_row, column=self._idx_comment).value
+    def _read_current_row(self, idx_column):
+        return self._sheet.cell(row=self._current_row, column=idx_column).value
 
-        return HazardousEvent(hazardous_event_id, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, hazard, relevance, comment)
+    def hazardous_events(self):
+        """
+Gets the hazardous events from the HARA
+        :return: Returns a HazardousEvents containing all the info for the hazardous event
+        """
+        while True:
+            self._current_row += 1
+            hazardous_event_id = self._read_current_row(self._idx_id)
+            location = self._read_current_row(self._idx_location)
+            slope = self._read_current_row(self._idx_slope)
+            route = self._read_current_row(self._idx_route)
+            road_condition = self._read_current_row(self._idx_road_condition)
+            engaged_gear = self._read_current_row(self._idx_engaged_gear)
+            vehicle_speed = self._read_current_row(self._idx_vehicle_speed)
+            brake_pedal = self._read_current_row(self._idx_brake_pedal)
+            hazard = self._read_current_row(self._idx_hazard)
+            relevance = self._read_current_row(self._idx_relevance) == 'x'
+            comment = self._read_current_row(self._idx_comment)
+
+            hazardous_event = HazardousEvent(hazardous_event_id, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, hazard, relevance, comment)
+
+            if hazardous_event.id is not None:
+                yield hazardous_event
+            else:
+                break
 
 
 class ScenarioList:
