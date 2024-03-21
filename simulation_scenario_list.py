@@ -138,7 +138,7 @@ Converts a Hazardous event to a Scenario (using the config settings)
         brake_pedal = hazardous_event.brake_pedal.lower()
         hazard = hazardous_event.hazard
 
-        if slope == 'any' or '-' or 'flat' in slope:  # TODO: remove 'any' from the script, specify correctly the slope in the HARA
+        if any(_ in slope for _ in ['any', '-', 'flat']):  # TODO: remove 'any' from the script, specify correctly the slope in the HARA
             road_gradient = config.get_entry('Slope', 'flat')
         elif 'slight' in slope:
             road_gradient = config.get_entry('Slope', 'slight_slope')
@@ -153,7 +153,7 @@ Converts a Hazardous event to a Scenario (using the config settings)
         except ValueError:
             raise ValueError(f"Invalid road gradient '{road_gradient}' in config file, in Slope section")
 
-        if vehicle_speed == 'any' or '-' or 'stand' in vehicle_speed:  # TODO: remove 'any' from the script, specify correctly the speed in the HARA
+        if any(_ in vehicle_speed for _ in ['any', '-', 'stand']):  # TODO: remove 'any' from the script, specify correctly the speed in the HARA
             speed = config.get_entry('Speed', 'standstill')
         elif 'very low' in vehicle_speed:
             speed = config.get_entry('Speed', 'very_low')
@@ -475,20 +475,6 @@ Method to deal with the writing of scenarios with a single fault but multiple re
                     ftti = [75, 150, 225, 300, 375]
                 elif '[TQ6]' in hazardous_event.hazard.upper():
                     ftti = [75, 150, 225, 300, 375]
-                elif '[SUS1]' in hazardous_event.hazard.upper():
-                    ftti = [5, 10, 15, 20, 25]
-                elif '[SUS2]' in hazardous_event.hazard.upper():
-                    ftti = [10, 20, 30, 40, 50]
-                elif '[SUS3]' in hazardous_event.hazard.upper():
-                    ftti = [5, 10, 15, 20, 25]
-                elif '[RAS1]' in hazardous_event.hazard.upper():
-                    ftti = [5, 10, 15, 20, 25]
-                elif '[RAS3]' in hazardous_event.hazard.upper():
-                    ftti = [10, 20, 30, 40, 50]
-                elif '[BS1]' in hazardous_event.hazard.upper():
-                    ftti = [75, 150, 225, 300, 375]
-                elif '[BS2]' in hazardous_event.hazard.upper():
-                    ftti = [0, 5, 10, 15, 20]
                 else:
                     raise Exception(f"The FTTI for {hazardous_event.id} could not be determined. Hazard could not be recognized: {hazardous_event.hazard}")
             else:
