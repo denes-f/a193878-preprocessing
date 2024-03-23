@@ -278,10 +278,6 @@ Gets a list of the faults for the specified hazard
             faults.append(TorqueFault(torque_error_front=self.config.get_float('Hazard_TQ', 'TQ7'),
                                       torque_error_rear=self.config.get_float('Hazard_TQ', 'TQ7'),
                                       slew_rate=self.config.get_float('Hazard_TQ', 'slew_rate')))
-        elif '[TQ8]' in hazard:
-            faults.append(TorqueFault(torque_error_front=self.config.get_float('Hazard_TQ', 'TQ8'),
-                                      torque_error_rear=self.config.get_float('Hazard_TQ', 'TQ8'),
-                                      slew_rate=self.config.get_float('Hazard_TQ', 'slew_rate')))
         return faults
 
 
