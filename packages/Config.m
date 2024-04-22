@@ -134,7 +134,7 @@
         end
         
         function value = readConfigNumber(configLines, section, key)
-            value = str2num(ExportMethods.readConfig(configLines, section, key));
+            value = str2num(Config.readConfig(configLines, section, key));
         end
     end
  end

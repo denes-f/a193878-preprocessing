@@ -3,42 +3,43 @@ clc
 
 %Reading config file
 config = readlines('config.ini');
+addpath("packages\");
 
-header_size = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'header_size');
-idx_constant_road_radius = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_constant_road_radius');
-idx_road_friction_coefficient = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_road_friction_coefficient');
-idx_road_gradient = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_road_gradient');
-idx_desired_vehicle_speed = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_desired_vehicle_speed');
-idx_acceleration = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_acceleration');
-idx_test_run_id = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_test_run_id');
-idx_steering_front_angle = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_steering_front_angle');
-idx_steering_front_slew_rate = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_steering_front_slew_rate');
-idx_steering_rear_angle = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_steering_rear_angle');
-idx_steering_rear_slew_rate = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_steering_rear_slew_rate');
-idx_torque_front_axle = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_torque_front_axle');
-idx_torque_rear_axle = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_torque_rear_axle');
-idx_torque_slew_rate = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_torque_slew_rate');
-idx_ride_height_front_left = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_front_left');
-idx_ride_height_front_right = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_front_right');
-idx_ride_height_rear_left = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_rear_left');
-idx_ride_height_rear_right = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_rear_right');
-idx_ride_height_slew_rate = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_slew_rate');
-idx_unintended_braking_torque = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_unintended_braking_torque');
-idx_very_slow_steering = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_very_slow_steering');
-idx_slow_steering = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_slow_steering');
-idx_braking = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_braking');
-idx_ftti = ExportMethods.readConfigNumber(config, 'Scenario_Template', 'idx_ftti');
+header_size = Config.readConfigNumber(config, 'Scenario_Template', 'header_size');
+idx_constant_road_radius = Config.readConfigNumber(config, 'Scenario_Template', 'idx_constant_road_radius');
+idx_road_friction_coefficient = Config.readConfigNumber(config, 'Scenario_Template', 'idx_road_friction_coefficient');
+idx_road_gradient = Config.readConfigNumber(config, 'Scenario_Template', 'idx_road_gradient');
+idx_desired_vehicle_speed = Config.readConfigNumber(config, 'Scenario_Template', 'idx_desired_vehicle_speed');
+idx_acceleration = Config.readConfigNumber(config, 'Scenario_Template', 'idx_acceleration');
+idx_test_run_id = Config.readConfigNumber(config, 'Scenario_Template', 'idx_test_run_id');
+idx_steering_front_angle = Config.readConfigNumber(config, 'Scenario_Template', 'idx_steering_front_angle');
+idx_steering_front_slew_rate = Config.readConfigNumber(config, 'Scenario_Template', 'idx_steering_front_slew_rate');
+idx_steering_rear_angle = Config.readConfigNumber(config, 'Scenario_Template', 'idx_steering_rear_angle');
+idx_steering_rear_slew_rate = Config.readConfigNumber(config, 'Scenario_Template', 'idx_steering_rear_slew_rate');
+idx_torque_front_axle = Config.readConfigNumber(config, 'Scenario_Template', 'idx_torque_front_axle');
+idx_torque_rear_axle = Config.readConfigNumber(config, 'Scenario_Template', 'idx_torque_rear_axle');
+idx_torque_slew_rate = Config.readConfigNumber(config, 'Scenario_Template', 'idx_torque_slew_rate');
+idx_ride_height_front_left = Config.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_front_left');
+idx_ride_height_front_right = Config.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_front_right');
+idx_ride_height_rear_left = Config.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_rear_left');
+idx_ride_height_rear_right = Config.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_rear_right');
+idx_ride_height_slew_rate = Config.readConfigNumber(config, 'Scenario_Template', 'idx_ride_height_slew_rate');
+idx_unintended_braking_torque = Config.readConfigNumber(config, 'Scenario_Template', 'idx_unintended_braking_torque');
+idx_very_slow_steering = Config.readConfigNumber(config, 'Scenario_Template', 'idx_very_slow_steering');
+idx_slow_steering = Config.readConfigNumber(config, 'Scenario_Template', 'idx_slow_steering');
+idx_braking = Config.readConfigNumber(config, 'Scenario_Template', 'idx_braking');
+idx_ftti = Config.readConfigNumber(config, 'Scenario_Template', 'idx_ftti');
 
-% scenario_list_path = ExportMethods.readConfig(config, 'Scenario_List', 'path');
+% scenario_list_path = Config.readConfig(config, 'Scenario_List', 'path');
 scenario_list_path = "Simulation_Scenario_List_FTTI.xlsx";
 % scenario_list_path = "Simulation_Scenario_List_Acceptance.xlsx";
-sheet_name = ExportMethods.readConfig(config, 'Scenario_Template', 'sheet_name');
-headers = split(ExportMethods.readConfig(config, 'Testrun_List', 'headers'), ',');
+sheet_name = Config.readConfig(config, 'Scenario_Template', 'sheet_name');
+headers = split(Config.readConfig(config, 'Testrun_List', 'headers'), ',');
 
-skip_sheet_generation = ExportMethods.readConfigNumber(config, 'Testrun_List', 'skip_sheet_generation');
-testrun_list_path = ExportMethods.readConfig(config, 'Testrun_List', 'path');
+skip_sheet_generation = Config.readConfigNumber(config, 'Testrun_List', 'skip_sheet_generation');
+testrun_list_path = Config.readConfig(config, 'Testrun_List', 'path');
 
-vsm_testrun_path = ExportMethods.readConfig(config, 'VSM_Testrun', 'path');
+vsm_testrun_path = Config.readConfig(config, 'VSM_Testrun', 'path');
 
 %Creating VSM Testrun structure from template and clearing testruns
 load('Template.vsd', 'Data', '-mat');
@@ -263,23 +264,23 @@ for iScenario = 1 : length(testRunIDs)
     %Setting customer channels (and dealing with NaN's)    
     for i = 1 : length(distance)
         vsmTestRuns.Track(iScenario).CustomerChannels(i,1) = faultActive(i);
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,2) = ExportMethods.get_number(scenarioListCells{iScenario, idx_steering_front_angle});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,3) = ExportMethods.get_number(scenarioListCells{iScenario, idx_steering_front_slew_rate});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,4) = ExportMethods.get_number(scenarioListCells{iScenario, idx_steering_rear_angle});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,5) = ExportMethods.get_number(scenarioListCells{iScenario, idx_steering_rear_slew_rate});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,6) = ExportMethods.get_value(scenarioListCells{iScenario, idx_torque_front_axle});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,7) = ExportMethods.get_value(scenarioListCells{iScenario, idx_torque_rear_axle});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,8) = ExportMethods.get_number(scenarioListCells{iScenario, idx_torque_slew_rate});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,9) = ExportMethods.get_number(scenarioListCells{iScenario, idx_ride_height_front_left});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,10) = ExportMethods.get_number(scenarioListCells{iScenario, idx_ride_height_front_right});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,11) = ExportMethods.get_number(scenarioListCells{iScenario, idx_ride_height_rear_left});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,12) = ExportMethods.get_number(scenarioListCells{iScenario, idx_ride_height_rear_right});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,13) = ExportMethods.get_number(scenarioListCells{iScenario, idx_ride_height_slew_rate});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,14) = ExportMethods.get_number(scenarioListCells{iScenario, idx_unintended_braking_torque});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,15) = ExportMethods.get_value(scenarioListCells{iScenario, idx_very_slow_steering});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,16) = ExportMethods.get_value(scenarioListCells{iScenario, idx_slow_steering});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,17) = ExportMethods.get_value(scenarioListCells{iScenario, idx_braking});
-        ftti = ExportMethods.get_value(scenarioListCells{iScenario, idx_ftti});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,2) = Config.get_number(scenarioListCells{iScenario, idx_steering_front_angle});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,3) = Config.get_number(scenarioListCells{iScenario, idx_steering_front_slew_rate});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,4) = Config.get_number(scenarioListCells{iScenario, idx_steering_rear_angle});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,5) = Config.get_number(scenarioListCells{iScenario, idx_steering_rear_slew_rate});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,6) = Config.get_value(scenarioListCells{iScenario, idx_torque_front_axle});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,7) = Config.get_value(scenarioListCells{iScenario, idx_torque_rear_axle});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,8) = Config.get_number(scenarioListCells{iScenario, idx_torque_slew_rate});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,9) = Config.get_number(scenarioListCells{iScenario, idx_ride_height_front_left});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,10) = Config.get_number(scenarioListCells{iScenario, idx_ride_height_front_right});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,11) = Config.get_number(scenarioListCells{iScenario, idx_ride_height_rear_left});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,12) = Config.get_number(scenarioListCells{iScenario, idx_ride_height_rear_right});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,13) = Config.get_number(scenarioListCells{iScenario, idx_ride_height_slew_rate});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,14) = Config.get_number(scenarioListCells{iScenario, idx_unintended_braking_torque});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,15) = Config.get_value(scenarioListCells{iScenario, idx_very_slow_steering});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,16) = Config.get_value(scenarioListCells{iScenario, idx_slow_steering});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,17) = Config.get_value(scenarioListCells{iScenario, idx_braking});
+        ftti = Config.get_value(scenarioListCells{iScenario, idx_ftti});
         if isnan(ftti)
             ftti = 1000;
         else
@@ -433,7 +434,7 @@ for iScenario = 1 : length(testRunIDs)
     vsmTestRuns.Track(iScenario).TrackInfo.Dist = distanceTrack;
     vsmTestRuns.Track(iScenario).TrackInfo.Speed = vsmTestRuns.Track(iScenario).v;
     
-    radiusText = ExportMethods.get_value(scenarioListCells{iScenario, idx_constant_road_radius});
+    radiusText = Config.get_value(scenarioListCells{iScenario, idx_constant_road_radius});
     if isnumeric(radiusText)
         if radiusText > 0
             curvature = 1 / radiusText;
@@ -459,7 +460,7 @@ for iScenario = 1 : length(testRunIDs)
         error('Error: Scenario %s: Road radius (%s) is invalid.', testRunIDs{iScenario}, radiusText)
     end
 
-    [trackX, trackY, trackZ, resultCurvature] = ExportMethods.get_track(vsmTestRuns.Track(iScenario).TrackInfo.Dist, curvature, vsmTestRuns.Track(iScenario).RGMap.RG(1), desiredSpeed);
+    [trackX, trackY, trackZ, resultCurvature] = Config.get_track(vsmTestRuns.Track(iScenario).TrackInfo.Dist, curvature, vsmTestRuns.Track(iScenario).RGMap.RG(1), desiredSpeed);
     vsmTestRuns.Track(iScenario).TrackInfo.TrackX = trackX;
     vsmTestRuns.Track(iScenario).TrackInfo.TrackY = trackY;
     vsmTestRuns.Track(iScenario).TrackInfo.TrackZ = trackZ;
@@ -518,7 +519,7 @@ if skip_sheet_generation ~= 1
             sizeTable = size(table);
             rowNum = sizeTable(1);
             colNum = sizeTable(2);
-            eActivesheetRange = get(hExcel.Activesheet,'Range', ['A1:', ExportMethods.num2xlcol(colNum), num2str(rowNum)]);
+            eActivesheetRange = get(hExcel.Activesheet,'Range', ['A1:', Config.num2xlcol(colNum), num2str(rowNum)]);
             eActivesheetRange.Value = table;
             
             timeElapsed = toc;
