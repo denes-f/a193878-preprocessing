@@ -48,7 +48,12 @@ while ~isempty(vsmTestRuns.Track)
     vsmTestRuns.Track(1) = [];
 end
 
-scenarioListSheet = readtable(scenario_list_path, 'Sheet', sheet_name, 'Range', header_size);
+opts = detectImportOptions(scenario_list_path);
+opts.VariableTypes{4} = 'char';
+opts.DataRange = 'A3';
+
+scenarioListSheet = readtable(scenario_list_path, opts);
+%scenarioListSheet = readtable(scenario_list_path, opts, 'Sheet', sheet_name, 'Range', header_size);
 scenarioListCells = table2cell(scenarioListSheet);
 
 testRunIDs = scenarioListCells(:, idx_test_run_id);
@@ -320,7 +325,7 @@ for iScenario = 1 : length(testRunIDs)
         vsmTestRuns.Track(iScenario).CustomerChannels(i,16) = Config.get_value(scenarioListCells{iScenario, idx_slow_steering});
         vsmTestRuns.Track(iScenario).CustomerChannels(i,17) = Config.get_value(scenarioListCells{iScenario, idx_braking});
         ftti = Config.get_value(scenarioListCells{iScenario, idx_ftti});
-        if isnan(ftti)
+        if ischar(ftti) && isempty(ftti)
             ftti = 1000;
         else
             ftti = ftti / 1000;
@@ -365,9 +370,17 @@ for iScenario = 1 : length(testRunIDs)
     vsmTable{iScenario}.disableGearShift = repmat("FALSE", size(vsmTable{iScenario}.disableGearShift));
 
     %Setting overall grip
+    if isnan(str2double(scenarioListCells{iScenario, idx_road_friction_coefficient}))
+        friction_list = strsplit(scenarioListCells{iScenario, idx_road_friction_coefficient}, '/');
+        friction = str2double(friction_list(1));
+        friction_ratio = str2double(friction_list(2)) / friction;
+    else
+        friction = str2double(scenarioListCells{iScenario, idx_road_friction_coefficient});
+        friction_ratio = 1;
+    end
     vsmTestRuns.Track(iScenario).GripMap.Dist = [distance(1); distance(end)];
-    vsmTestRuns.Track(iScenario).GripMap.Grip(1) = 100 * scenarioListCells{iScenario, idx_road_friction_coefficient};
-    vsmTestRuns.Track(iScenario).GripMap.Grip(2) = 100 * scenarioListCells{iScenario, idx_road_friction_coefficient};
+    vsmTestRuns.Track(iScenario).GripMap.Grip(1) = 100 * friction;
+    vsmTestRuns.Track(iScenario).GripMap.Grip(2) = 100 * friction;
     vsmTable{iScenario}.gripOverall = vsmTestRuns.Track(iScenario).GripMap.Grip(1) * ones(length(distance), 1);
 
     %Checking and setting front left grip
@@ -378,8 +391,8 @@ for iScenario = 1 : length(testRunIDs)
 
     %Checking and setting front right grip   
     vsmTestRuns.Track(iScenario).GripFRMap.Dist = [distance(1); distance(end)];
-    vsmTestRuns.Track(iScenario).GripFRMap.Grip(1) = 100;
-    vsmTestRuns.Track(iScenario).GripFRMap.Grip(2) = 100;
+    vsmTestRuns.Track(iScenario).GripFRMap.Grip(1) = 100 * friction_ratio;
+    vsmTestRuns.Track(iScenario).GripFRMap.Grip(2) = 100 * friction_ratio;
     vsmTable{iScenario}.gripFR = vsmTestRuns.Track(iScenario).GripFRMap.Grip(1) * ones(length(distance), 1);
 
     %Checking and setting rear left grip    
@@ -390,8 +403,8 @@ for iScenario = 1 : length(testRunIDs)
 
     %Checking and setting rear right grip    
     vsmTestRuns.Track(iScenario).GripRRMap.Dist = [distance(1); distance(end)];
-    vsmTestRuns.Track(iScenario).GripRRMap.Grip(1) = 100;
-    vsmTestRuns.Track(iScenario).GripRRMap.Grip(2) = 100;
+    vsmTestRuns.Track(iScenario).GripRRMap.Grip(1) = 100 * friction_ratio;
+    vsmTestRuns.Track(iScenario).GripRRMap.Grip(2) = 100 * friction_ratio;
     vsmTable{iScenario}.gripRR = vsmTestRuns.Track(iScenario).GripRRMap.Grip(1) * ones(length(distance), 1);
 
     %No lat grip values needed since UseLongLatGripMaps is set to 0
@@ -594,5 +607,5 @@ if skip_sheet_generation ~= 1
 end
 
 %Saving testruns in VSM format   --% save(vsm_testrun_path, 'vsmTestRuns')
-save('D:\Huawei_FUSA\03_FuSa\02_Scenario Script\01_Preprocessing\Maneuvers\VSM_Testrun_test.vsd', 'vsmTestRuns')
+save('VSM_Testrun.vsd', 'vsmTestRuns')
 fprintf('Done\n');
