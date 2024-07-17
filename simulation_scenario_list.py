@@ -103,7 +103,7 @@ class HazardousEvent:
     """
 Type containing all information for a Hazardous Event
     """
-    def __init__(self, hazardous_event_id, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, accelerator_pedal, hazard, relevant, comment):
+    def __init__(self, hazardous_event_id, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, maneuver, hazard, relevant, comment):
         self.id = hazardous_event_id
         self.location = location
         self.slope = slope
@@ -112,7 +112,7 @@ Type containing all information for a Hazardous Event
         self.engaged_gear = engaged_gear
         self.vehicle_speed = vehicle_speed
         self.brake_pedal = brake_pedal
-        self.accelerator_pedal = accelerator_pedal
+        self.maneuver = maneuver
         self.hazard = hazard
         self.relevant = relevant
         self.comment = comment
@@ -131,7 +131,7 @@ Converts a Hazardous event to a Scenario (using the config settings)
         engaged_gear = hazardous_event.engaged_gear.lower()
         vehicle_speed = hazardous_event.vehicle_speed.lower()
         brake_pedal = hazardous_event.brake_pedal.lower()
-        accelerator_pedal = hazardous_event.accelerator_pedal.lower()
+        maneuver = hazardous_event.maneuver.lower()
 
         if slope == '-' or any(_ in slope for _ in ['any', 'flat']):  # TODO: remove 'any' from the script, specify correctly the slope in the HARA
             road_gradient = config.get_entry('Slope', 'flat')
@@ -207,8 +207,8 @@ Converts a Hazardous event to a Scenario (using the config settings)
         if any(v != 0 for v in self.vehicle_speed):
             if 'pressed' in brake_pedal:
                 acceleration = config.get_entry('Driver', 'brake_pressed')
-            elif 'pressed' in accelerator_pedal:
-                acceleration = config.get_entry('Driver', 'accelerator_pressed')
+            elif 'overtaking' in maneuver:
+                acceleration = config.get_entry('Driver', 'overtaking')
             else:
                 acceleration = 0
             try:
@@ -313,6 +313,7 @@ Loads the HARA sheet and gets the hazardous events
         self._idx_vehicle_speed = self._config.get_int('Hara_Sheet', 'idx_vehicle_speed')
         self._idx_brake_pedal = self._config.get_int('Hara_Sheet', 'idx_brake_pedal')
         self._idx_accelerator_pedal = self._config.get_int('Hara_Sheet', 'idx_accelerator_pedal')
+        self._idx_maneuver = self._config.get_int('Hara_Sheet', 'idx_maneuver')
         self._idx_hazard = self._config.get_int('Hara_Sheet', 'idx_hazard')
         self._idx_relevance = self._config.get_int('Hara_Sheet', 'idx_relevance')
         self._idx_comment = self._config.get_int('Hara_Sheet', 'idx_comment')
@@ -336,11 +337,12 @@ Gets the hazardous events from the HARA
             vehicle_speed = self._read_current_row(self._idx_vehicle_speed)
             brake_pedal = self._read_current_row(self._idx_brake_pedal)
             accelerator_pedal = self._read_current_row(self._idx_accelerator_pedal)
+            maneuver = self._read_current_row(self._idx_maneuver)
             hazard = self._read_current_row(self._idx_hazard)
             relevance = self._read_current_row(self._idx_relevance) == 'x'
             comment = self._read_current_row(self._idx_comment)
 
-            hazardous_event = HazardousEvent(hazardous_event_id, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, accelerator_pedal, hazard, relevance, comment)
+            hazardous_event = HazardousEvent(hazardous_event_id, location, slope, route, road_condition, engaged_gear, vehicle_speed, brake_pedal, maneuver, hazard, relevance, comment)
 
             if hazardous_event.id is not None:
                 yield hazardous_event
