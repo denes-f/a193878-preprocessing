@@ -30,8 +30,8 @@ idx_slow_steering = Config.readConfigNumber(config, 'Scenario_Template', 'idx_sl
 idx_braking = Config.readConfigNumber(config, 'Scenario_Template', 'idx_braking');
 idx_ftti = Config.readConfigNumber(config, 'Scenario_Template', 'idx_ftti');
 
-% scenario_list_path = Config.readConfig(config, 'Scenario_List', 'path');
-scenario_list_path = "Simulation_Scenario_List.xlsx";
+scenario_list_path = Config.readConfig(config, 'Scenario_List', 'path');
+%scenario_list_path = "D:\Huawei_FUSA\03_FuSa\01_Simulation\Simulation_Scenario_List.xlsx";
 % scenario_list_path = "Simulation_Scenario_List_Acceptance.xlsx";
 sheet_name = Config.readConfig(config, 'Scenario_Template', 'sheet_name');
 headers = split(Config.readConfig(config, 'Testrun_List', 'headers'), ',');
@@ -129,10 +129,25 @@ for iScenario = 1 : length(testRunIDs)
 %             otherwise
 %                 warning("Unexpected vehicle speed %d km/h", desiredSpeed)
 %         end
+
+        initialSpeed = 3.6 * sqrt(power(desiredSpeed / 3.6, 2) - 2 * vehicleAcceleration * 50);
+        if initialSpeed < 5 && vehicleAcceleration>0 
+            initialSpeed = 5;
+            desiredSpeed = initialSpeed;
+        end
         
         distanceFaultInjection = ceil((20 + (desiredSpeed / 3.6 * 10))/10) * 10;
-                
-        endDistance = ceil((distanceFaultInjection + (desiredSpeed / 3.6) * 10) / 50) * 50;
+        
+        if distanceFaultInjection<50 && vehicleAcceleration>0 
+            distanceFaultInjection = 60;
+        end
+        
+        if desiredSpeed < 30          
+            endDistance = ceil((distanceFaultInjection + (30 / 3.6) * 10) / 50) * 50;
+        else
+            endDistance = ceil((distanceFaultInjection + (desiredSpeed / 3.6) * 10) / 50) * 50;
+        end
+        
         stepSize = 1;
         if ~isnan(vehicleAcceleration) && isnumeric(vehicleAcceleration) && vehicleAcceleration ~= 0 %Acceleration during scenario
             distanceFaultInjection = distanceFaultInjection - 0.01;
@@ -175,11 +190,22 @@ for iScenario = 1 : length(testRunIDs)
             
             distance = distance';
             
-            controlMode = [22 * ones(iAcceleration, 1); 24 * ones(length(distance) - iAcceleration, 1)]; %Speed control mode is 22 and acceleration mode is 24
+            controlMode = [22 * ones(iAcceleration, 1); 22 * ones(length(distance) - iAcceleration, 1)]; %Speed control mode is 22 and acceleration mode is 24
             faultActive = [zeros(iFaultInjection, 1); ones(length(distance) - iFaultInjection, 1)];
 
-            initialSpeed = 3.6 * sqrt(power(desiredSpeed / 3.6, 2) - 2 * vehicleAcceleration * 50);
-            vehicleSpeed = [initialSpeed * ones(iAcceleration, 1); vehicleAcceleration / 9.81 * ones(length(distance) - iAcceleration, 1)];
+            %initialSpeed = 3.6 * sqrt(power(desiredSpeed / 3.6, 2) - 2 * vehicleAcceleration * 50);
+            %if initialSpeed < 5
+            %    initialSpeed = 5;
+            %end
+            vehicleSpeed = [initialSpeed * ones(iAcceleration, 1); 0 * ones(length(distance) - iAcceleration, 1)];
+            for index = iAcceleration+1 : length(distance)-1
+                vehicleSpeed(index)=  sqrt(2*vehicleAcceleration*12960*(distance(index)-distance(index-1))*10^-3+vehicleSpeed(index-1)^2);
+                if vehicleAcceleration>0 && vehicleSpeed(index)< 5
+                    vehicleSpeed(index)= 5;
+                end
+                    
+            end
+            %vehicleSpeed = [initialSpeed * ones(iAcceleration, 1); vehicleAcceleration / 9.81 * ones(length(distance) - iAcceleration, 1)];
 
         else %Constant speed driving
             distanceFaultInjection = distanceFaultInjection - 0.01;
@@ -229,16 +255,29 @@ for iScenario = 1 : length(testRunIDs)
     end
 
     vsmTestRuns.Track(iScenario).AddDMD1Map.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).AddDMD1Map.AddDMD1 = ones(1, length([distance(1); distance(end)]));
+    
     vsmTestRuns.Track(iScenario).AddDMD2Map.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).AddDMD2Map.AddDMD2 = zeros(1, length([distance(1); distance(end)]));
+    
     vsmTestRuns.Track(iScenario).AddDMD3Map.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).AddDMD3Map.AddDMD3 = 1.2882297539194254E-231*(ones(1, length([distance(1); distance(end)]))); %vsmTestRuns.Track(iScenario).AddDMD3Map.AddDMD3(1)
+    
     vsmTestRuns.Track(iScenario).AddDMD4Map.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).AddDMD4Map.AddDMD4 = -1*(ones(1, length([distance(1); distance(end)])));
+    
     vsmTestRuns.Track(iScenario).AddDMD5Map.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).AddDMD5Map.AddDMD5 = zeros(1, length([distance(1); distance(end)]));
+    
     vsmTestRuns.Track(iScenario).AddDMD6Map.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).AddDMD6Map.AddDMD6 = zeros(1, length([distance(1); distance(end)]));
+    
     vsmTestRuns.Track(iScenario).AddDMD7Map.Dist = [distance(1); distance(end)];
-
+    vsmTestRuns.Track(iScenario).AddDMD7Map.AddDMD7 = zeros(1, length([distance(1); distance(end)]));
+    
     %Setting brake pressures
-    vsmTestRuns.Track(iScenario).AddpBrakeMap.Dist = distance; 
-    vsmTestRuns.Track(iScenario).AddpBrakeMap.AddpBrake = zeros(size(distance));
+    vsmTestRuns.Track(iScenario).AddpBrakeMap.Dist = [distance(1); distance(end)]; 
+    vsmTestRuns.Track(iScenario).AddpBrakeMap.AddpBrake = zeros(1, length(vsmTestRuns.Track(iScenario).AddpBrakeMap.Dist));
 
     %Setting clutch state
     vsmTestRuns.Track(iScenario).ClutchMap.Dist = [distance(1); distance(end)];
@@ -276,7 +315,7 @@ for iScenario = 1 : length(testRunIDs)
         vsmTestRuns.Track(iScenario).CustomerChannels(i,11) = 0; %Config.get_number(scenarioListCells{iScenario, idx_ride_height_rear_left});
         vsmTestRuns.Track(iScenario).CustomerChannels(i,12) = 0; %Config.get_number(scenarioListCells{iScenario, idx_ride_height_rear_right});
         vsmTestRuns.Track(iScenario).CustomerChannels(i,13) = 0; %Config.get_number(scenarioListCells{iScenario, idx_ride_height_slew_rate});
-        vsmTestRuns.Track(iScenario).CustomerChannels(i,14) = 0; %Config.get_number(scenarioListCells{iScenario, idx_unintended_braking_torque});
+        vsmTestRuns.Track(iScenario).CustomerChannels(i,14) = NaN; %Config.get_number(scenarioListCells{iScenario, idx_unintended_braking_torque});
         vsmTestRuns.Track(iScenario).CustomerChannels(i,15) = Config.get_value(scenarioListCells{iScenario, idx_very_slow_steering});
         vsmTestRuns.Track(iScenario).CustomerChannels(i,16) = Config.get_value(scenarioListCells{iScenario, idx_slow_steering});
         vsmTestRuns.Track(iScenario).CustomerChannels(i,17) = Config.get_value(scenarioListCells{iScenario, idx_braking});
@@ -289,9 +328,6 @@ for iScenario = 1 : length(testRunIDs)
         vsmTestRuns.Track(iScenario).CustomerChannels(i,18) = ftti;
         vsmTestRuns.Track(iScenario).CustomerChannels(i,19) = str2num(scenarioListCells{iScenario, idx_test_run_id});
     end
-    
-
-
 
     vsmTable{iScenario}.faultActive = vsmTestRuns.Track(iScenario).CustomerChannels(:,1);
     vsmTable{iScenario}.Front_Steering_fault_deg = vsmTestRuns.Track(iScenario).CustomerChannels(:,2);
@@ -315,17 +351,17 @@ for iScenario = 1 : length(testRunIDs)
 
     
     %Setting demand gear
-    vsmTestRuns.Track(iScenario).DMDGearMap.Dist = distance;
-    vsmTestRuns.Track(iScenario).DMDGearMap.DMDGear = -2 * ones(1, length(distance)); %D is -2
+    vsmTestRuns.Track(iScenario).DMDGearMap.Dist = [distance(1); distance(end)]; % distance;
+    vsmTestRuns.Track(iScenario).DMDGearMap.DMDGear = -2 * ones(1, length(vsmTestRuns.Track(iScenario).DMDGearMap.Dist)); %D is -1
     vsmTable{iScenario}.demandGear = repmat("D", size(vsmTable{iScenario}.demandGear));
 
     %Setting DMDSpeed
-    vsmTestRuns.Track(iScenario).DMDSpeedMap.Dist(1) = distance(1);
-    vsmTestRuns.Track(iScenario).DMDSpeedMap.Dist(2) = distance(end);
+    vsmTestRuns.Track(iScenario).DMDSpeedMap.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).DMDSpeedMap.DMDSpeed = zeros(1, length(vsmTestRuns.Track(iScenario).DMDSpeedMap.Dist));
 
     %Setting disable gear shift for simulation
-    vsmTestRuns.Track(iScenario).DisableGSMap.Dist = distance;
-    vsmTestRuns.Track(iScenario).DisableGSMap.DisableGS = zeros(1, length(distance));
+    vsmTestRuns.Track(iScenario).DisableGSMap.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).DisableGSMap.DisableGS = zeros(1, length([distance(1); distance(end)]));
     vsmTable{iScenario}.disableGearShift = repmat("FALSE", size(vsmTable{iScenario}.disableGearShift));
 
     %Setting overall grip
@@ -396,12 +432,12 @@ for iScenario = 1 : length(testRunIDs)
     vsmTable{iScenario}.roadGradient = vsmTestRuns.Track(iScenario).RGMap.RG(1) * ones(length(distance), 1);
 
     %Setting SteerAngleMap    
-    vsmTestRuns.Track(iScenario).SteerAngleMap.Dist = distance;
-    vsmTestRuns.Track(iScenario).SteerAngleMap.SteerAngle = zeros(size(distance));
+    vsmTestRuns.Track(iScenario).SteerAngleMap.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).SteerAngleMap.SteerAngle = zeros(size([distance(1); distance(end)]));
 
     %Setting steer mode    
-    vsmTestRuns.Track(iScenario).SteerModeMap.Dist = distance;
-    vsmTestRuns.Track(iScenario).SteerModeMap.SteerMode = zeros(1, length(distance));
+    vsmTestRuns.Track(iScenario).SteerModeMap.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).SteerModeMap.SteerMode = zeros(1, length([distance(1); distance(end)]));
     
     %Setting VSM default values
     vsmTable{iScenario}.steerMode = repmat("Driver", size(vsmTable{iScenario}.steerMode));
@@ -469,13 +505,14 @@ for iScenario = 1 : length(testRunIDs)
 
     %Setting velocity limit
     vsmTestRuns.Track(iScenario).VelocityLimit.DemandSpeedMap.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).VelocityLimit.DemandSpeedMap.Speed = zeros(1, length([distance(1); distance(end)]));
 
     %Setting roughness    
-    vsmTestRuns.Track(iScenario).ZSMap.Dist = distance;
-    vsmTestRuns.Track(iScenario).ZSMap.ZS_FL = zeros(size(distance));
-    vsmTestRuns.Track(iScenario).ZSMap.ZS_FR = zeros(size(distance));
-    vsmTestRuns.Track(iScenario).ZSMap.ZS_RL = zeros(size(distance));
-    vsmTestRuns.Track(iScenario).ZSMap.ZS_RR = zeros(size(distance));
+    vsmTestRuns.Track(iScenario).ZSMap.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).ZSMap.ZS_FL = zeros(1, length([distance(1); distance(end)]));
+    vsmTestRuns.Track(iScenario).ZSMap.ZS_FR = zeros(1, length([distance(1); distance(end)]));
+    vsmTestRuns.Track(iScenario).ZSMap.ZS_RL = zeros(1, length([distance(1); distance(end)]));
+    vsmTestRuns.Track(iScenario).ZSMap.ZS_RR = zeros(1, length([distance(1); distance(end)]));
                         
     vsmTable{iScenario}.roadRoughnessFL = vsmTestRuns.Track(iScenario).ZSMap.ZS_FL(1) * ones(length(distance), 1);
     vsmTable{iScenario}.roadRoughnessFR = vsmTestRuns.Track(iScenario).ZSMap.ZS_FR(1) * ones(length(distance), 1);
@@ -488,8 +525,8 @@ for iScenario = 1 : length(testRunIDs)
     vsmTable{iScenario}.Curvature = resultCurvature';
 
     %Setting kNorm value
-    vsmTestRuns.Track(iScenario).kNormMap.Dist(1) = distance(1);
-    vsmTestRuns.Track(iScenario).kNormMap.Dist(2) = distance(end);
+    vsmTestRuns.Track(iScenario).kNormMap.Dist = [distance(1); distance(end)];
+    vsmTestRuns.Track(iScenario).kNormMap.kNorm = zeros(1,length([distance(1); distance(end)]));
     
     timeElapsed = toc;
 
@@ -556,6 +593,6 @@ if skip_sheet_generation ~= 1
     end
 end
 
-%Saving testruns in VSM format
-save(vsm_testrun_path, 'vsmTestRuns')
+%Saving testruns in VSM format   --% save(vsm_testrun_path, 'vsmTestRuns')
+save('D:\Huawei_FUSA\03_FuSa\02_Scenario Script\01_Preprocessing\Maneuvers\VSM_Testrun_test.vsd', 'vsmTestRuns')
 fprintf('Done\n');
