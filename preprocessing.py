@@ -172,7 +172,9 @@ Converts a Hazardous event to a Scenario (using the config settings)
         if route == '-' or any(_ in route for _ in ['any', 'straight']):  # TODO: remove 'any' from the script, specify correctly the route in the HARA
             self.road_radius = 'straight'
         elif 'curve' in route:
-            if vehicle_speed == '-' or any(_ in vehicle_speed for _ in ['any', 'stand', 'low']):  # TODO: remove 'any' from the script, specify correctly the speed in the HARA
+            if 'very_low' in vehicle_speed:
+                radius = config.get_entry('Radius', 'curve_very_low_speed')
+            elif vehicle_speed == '-' or any(_ in vehicle_speed for _ in ['any', 'stand', 'low']):  # TODO: remove 'any' from the script, specify correctly the speed in the HARA
                 radius = config.get_entry('Radius', 'curve_low_speed')
             elif 'medium' in vehicle_speed:
                 radius = config.get_entry('Radius', 'curve_medium_speed')
@@ -180,10 +182,15 @@ Converts a Hazardous event to a Scenario (using the config settings)
                 radius = config.get_entry('Radius', 'curve_high_speed')
             else:
                 raise Exception(f"Speed '{vehicle_speed}' not recognized in hazardous event {hazardous_event.id}")
-            try:
-                self.road_radius = float(radius)
-            except ValueError:
-                raise ValueError(f"Invalid curve radius in config file, '{radius}' in Radius section")
+            radius_list = radius.strip('[').strip(']').split(',')
+            self.road_radius = [.0] * len(radius_list)
+            for i in range(len(radius_list)):
+                try:
+                    self.road_radius[i] = float(radius_list[i])
+                except ValueError:
+                    raise ValueError(f"Invalid curve radius in config file, '{radius}' in Radius section")
+            if len(self.road_radius) != len(self.vehicle_speed):
+                raise ValueError(f"Invalid curve radius specification in config file, the number of radius specified has to match the number of speeds defined.")
         else:
             raise Exception(f"Route '{route}' not recognized")
 
@@ -293,8 +300,9 @@ Loads the HARA sheet and gets the hazardous events
         if not os.path.exists(self._hara_path):
             raise Exception(f"Hara sheet was not found: {self._hara_path}")
         hara_workbook = openpyxl.load_workbook(self._hara_path, data_only=True)
-        self._sheet = hara_workbook[self._hara_sheet_name]
-        if self._sheet is None:
+        try:
+            self._sheet = hara_workbook[self._hara_sheet_name]
+        except KeyError:
             raise Exception(f"Sheet {self._hara_sheet_name} was not found in {self._hara_path}")
         header_size = self._config.get_int('Hara_Sheet', 'header_size')
         if header_size < 0:
@@ -432,18 +440,20 @@ Generates the Scenario list to a file
         :param hazardous_event: HARA entry
         :param scenario: Scenario
         """
-        for speed in scenario.vehicle_speed:
+        for i, speed in enumerate(scenario.vehicle_speed):
+            radius = scenario.road_radius if type(scenario.road_radius) is str else scenario.road_radius[i]
             for fault in scenario.faults:
                 reactions = self._get_reactions(fault, scenario)
                 for reaction in reactions:
-                    self._write_line(hazardous_event, scenario, speed, fault, reaction)
+                    self._write_line(hazardous_event, scenario, speed, radius, fault, reaction)
 
-    def _write_line(self, hazardous_event, scenario, vehicle_speed, fault, reaction):
+    def _write_line(self, hazardous_event, scenario, vehicle_speed, road_radius, fault, reaction):
         """
 Method to deal with the writing of scenarios with a single fault but multiple reactions
         :param hazardous_event: HARA entry
         :param scenario: Scenario
         :param vehicle_speed: Vehicle speed
+        :param road_radius: Road radius
         :param fault: A single malfunction
         :param reaction: Either None, one reaction or a list of reactions
         """
@@ -500,7 +510,7 @@ Method to deal with the writing of scenarios with a single fault but multiple re
 
                 self._sheet.cell(row=self._current_row, column=self._idx_hara_id).value = hazardous_event.id
                 self._sheet.cell(row=self._current_row, column=self._idx_test_run_id).value = '%05d' % loc_test_run_id
-                self._sheet.cell(row=self._current_row, column=self._idx_constant_road_radius).value = scenario.road_radius
+                self._sheet.cell(row=self._current_row, column=self._idx_constant_road_radius).value = road_radius
                 self._sheet.cell(row=self._current_row, column=self._idx_road_friction_coefficient).value = scenario.road_friction
                 self._sheet.cell(row=self._current_row, column=self._idx_road_gradient).value = scenario.road_gradient
                 self._sheet.cell(row=self._current_row, column=self._idx_lateral_acceleration).value = '=IF(ISNUMBER(C{0}),(H{0}/3.6)^2/C{0},"-")'.format(self._current_row)
