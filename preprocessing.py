@@ -204,12 +204,18 @@ Converts a Hazardous event to a Scenario (using the config settings)
                 self.vehicle_speed[i] = min(self.vehicle_speed[i], 80)  # Vehicle speed is limited to 80 km/h on icy surfaces
         elif 'gravel' in road_condition:
             road_friction = config.get_entry('Road_friction', 'gravel')
+        elif 'mu-split' in road_condition:
+            road_friction = config.get_entry('Road_friction', 'mu-split')
         else:
             raise Exception(f"Road condition {road_condition} not recognized in hazardous event {hazardous_event.id}")
-        try:
-            self.road_friction = float(road_friction)
-        except ValueError:
-            raise ValueError(f"Invalid road friction in config file, '{road_friction}' in Road_friction section")
+
+        if 'mu-split' not in road_condition:
+            try:
+                self.road_friction = float(road_friction)
+            except ValueError:
+                raise ValueError(f"Invalid road friction in config file, '{road_friction}' in Road_friction section")
+        else:
+            self.road_friction = road_friction
 
         if any(v != 0 for v in self.vehicle_speed):
             if 'pressed' in brake_pedal:
@@ -573,7 +579,7 @@ Method to get the expected reactions based on the fault and road conditions
                 braking_reaction = self._config.get_float('Reaction', 'braking_torque_fault_low')
         else:
             braking_reaction = self._config.get_float('Reaction', 'braking_normal')
-        if scenario.road_friction <= self._config.get_float('Road_friction', 'icy'):
+        if type(scenario.road_friction) is float and scenario.road_friction <= self._config.get_float('Road_friction', 'icy'):
             braking_reaction = min(braking_reaction, self._config.get_float('Reaction', 'braking_low_friction'))
 
         # Braking without steering is a reaction that is expected always unless the fault is already leading to a high deceleration
@@ -582,7 +588,7 @@ Method to get the expected reactions based on the fault and road conditions
 
         # Braking reaction together with steering correction is expected always except when driving on a straight road with a high friction
         friction_limit = self._config.get_float('Road_friction', 'gravel')
-        if (not isinstance(scenario.road_radius, str)) or scenario.road_friction < friction_limit or (isinstance(fault, TorqueFault) and fault.losing_stability()):
+        if (not isinstance(scenario.road_radius, str)) or (isinstance(scenario.road_friction, float) and scenario.road_friction < friction_limit) or (isinstance(fault, TorqueFault) and fault.losing_stability()):
             # Braking with very slow steering reaction:
             reactions.append([BrakingReaction(braking_reaction), VerySlowSteeringReaction(self._config.get_float('Reaction', 'very_slow_steering'))])
             # Braking with slow steering reaction:
