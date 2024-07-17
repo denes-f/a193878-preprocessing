@@ -8,7 +8,7 @@ import openpyxl.styles
 from packages.config import Config
 
 
-def main(mode):
+def preprocessing(mode):
     """
 Generates a list of scenarios for the simulation using the HARA sheet as input.
     """
@@ -610,6 +610,6 @@ Formatting the sheet and saving it
 
 if __name__ == '__main__':
     print('Status: Started')
-    main('Scenario_List')
+    preprocessing('Scenario_List')
     # main('FTTI_List')
     # main('Acceptance_List')
