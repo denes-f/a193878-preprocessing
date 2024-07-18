@@ -2,9 +2,7 @@
 .idea/*
 __pycache__/*
 OtherProject/*
-ALT3006_FuSa_Sim_EPT_HARA*.xlsx
-Simulation_Scenario_List.xlsx
+/*.xlsx
 packages/__pycache__/*
 VSM_Testrun.vsd
 *.asv
-VSM_Testrun_List.xlsx
