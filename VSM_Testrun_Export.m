@@ -30,9 +30,9 @@ idx_slow_steering = Config.readConfigNumber(config, 'Scenario_Template', 'idx_sl
 idx_braking = Config.readConfigNumber(config, 'Scenario_Template', 'idx_braking');
 idx_ftti = Config.readConfigNumber(config, 'Scenario_Template', 'idx_ftti');
 
-scenario_list_path = Config.readConfig(config, 'Scenario_List', 'path');
+%scenario_list_path = Config.readConfig(config, 'Scenario_List', 'ftti_path');
 %scenario_list_path = "D:\Huawei_FUSA\03_FuSa\01_Simulation\Simulation_Scenario_List.xlsx";
-% scenario_list_path = "Simulation_Scenario_List_Acceptance.xlsx";
+scenario_list_path = "Simulation_Scenario_List_FTTI.xlsx";
 sheet_name = Config.readConfig(config, 'Scenario_Template', 'sheet_name');
 headers = split(Config.readConfig(config, 'Testrun_List', 'headers'), ',');
 
@@ -154,6 +154,12 @@ for iScenario = 1 : length(testRunIDs)
         end
         
         stepSize = 1;
+        radiusText = Config.get_value(scenarioListCells{iScenario, idx_constant_road_radius});
+        if isnumeric(radiusText)
+            if radiusText > 0 && radiusText < 25
+                stepSize = 5;
+            end    
+        end
         if ~isnan(vehicleAcceleration) && isnumeric(vehicleAcceleration) && vehicleAcceleration ~= 0 %Acceleration during scenario
             distanceFaultInjection = distanceFaultInjection - 0.01;
             distanceAcceleration = distanceFaultInjection - 50;
@@ -606,6 +612,7 @@ if skip_sheet_generation ~= 1
     end
 end
 
-%Saving testruns in VSM format   --% save(vsm_testrun_path, 'vsmTestRuns')
-save('VSM_Testrun.vsd', 'vsmTestRuns')
+%Saving testruns in VSM format
+save(vsm_testrun_path, 'vsmTestRuns')
+%save('D:\Huawei_FUSA\03_FuSa\02_Scenario Script\01_Preprocessing\Maneuvers\VSM_Testrun_test.vsd', 'vsmTestRuns')
 fprintf('Done\n');
