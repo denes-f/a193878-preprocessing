@@ -59,7 +59,10 @@ class TorqueFault:
         :return: Returns true if there is a possibility for losing stability
         """
         if self.torque_error_rear is not None:
-            if self.torque_error_rear < 50:
+            if self.torque_error_rear < 0:
+                return True
+        if self.torque_error_front is not None:
+            if self.torque_error_front < 0:
                 return True
         if self.torque_error_front is not None and self.torque_error_rear is not None:
             if self.torque_error_front < 0 and self.torque_error_rear > 0:  # pylint: disable=chained-comparison
@@ -450,7 +453,7 @@ class ScenarioList:
         for i, speed in enumerate(scenario.vehicle_speed):
             radius = scenario.road_radius if isinstance(scenario.road_radius, str) else scenario.road_radius[i]
             for fault in scenario.faults:
-                reactions = self._get_reactions(fault, scenario)
+                reactions = self._get_reactions(fault, scenario, hazardous_event)
                 for reaction in reactions:
                     self._write_line(hazardous_event, scenario, speed, radius, fault, reaction)
 
@@ -508,7 +511,7 @@ class ScenarioList:
 
             loc_test_run_id = self._current_row - self._header_size
 
-            print(f"Status: Writing item #{self._current_row - self._header_size}")
+            print(f"Status: Writing scenario #{self._current_row - self._header_size}")
 
             self._write_cell(self._indexes.hara_id, hazardous_event.identifier)
             self._write_cell(self._indexes.test_run_id, f"{loc_test_run_id:05d}")
@@ -551,11 +554,12 @@ class ScenarioList:
             self._write_cell(self._indexes.torque_rear_axle, fault.torque_error_rear)
             self._write_cell(self._indexes.torque_slew_rate, fault.slew_rate)
 
-    def _get_reactions(self, fault, scenario):
+    def _get_reactions(self, fault, scenario, hazardous_event):
         """
         Method to get the expected reactions based on the fault and road conditions
         :param fault: Malfunction
         :param scenario: Scenario
+        :param hazardous_event: Hazardous event
         :return: Returns all the expected reactions in a list
         """
 
@@ -567,7 +571,7 @@ class ScenarioList:
         # The braking however is limited to a lower level on icy surfaces.
 
         if isinstance(fault, TorqueFault):
-            if fault.get_overall_torque() > 100:
+            if fault.get_overall_torque() > 100 or 'TQ4' in hazardous_event.hazard:
                 braking_reaction = self._config.get_float('Reaction', 'braking_torque_fault_high')
             elif fault.get_overall_torque() < 0:
                 braking_reaction = 5
@@ -580,9 +584,7 @@ class ScenarioList:
             braking_reaction = min(braking_reaction, self._config.get_float('Reaction', 'braking_low_friction'))
 
         # Braking without steering is a reaction that is expected always
-        # unless the fault is already leading to a high deceleration
-        if not isinstance(fault, TorqueFault) or fault.get_overall_torque() >= 0:
-            reactions.append([VerySlowSteeringReaction(0), SlowSteeringReaction(0), BrakingReaction(braking_reaction)])
+        reactions.append([VerySlowSteeringReaction(0), SlowSteeringReaction(0), BrakingReaction(braking_reaction)])
 
         # Braking reaction together with steering correction is expected always
         # except when driving on a straight road with a high friction
